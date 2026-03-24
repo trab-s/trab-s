@@ -18,7 +18,7 @@ if "foto" not in st.session_state:
 
 CONFIG_GRAFICOS = {
     'cores_barras': ['#8B0000', '#FF4500', '#FFD700', '#32CD32', '#4682B4'],
-    'cores_pizza': ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
+    'cores_pizza': ['#8B0000', '#FF4500', '#FFD700', '#32CD32', '#4682B4'],
     'cores_ranking': ['#FFD700', '#FFA500', '#FF8C00', '#FF6347', '#FF4500', '#DC143C', '#B22222', '#8B0000', '#696969', '#2F4F4F'], # Top 10
     'labels_notas': ['Nota 1', 'Nota 2', 'Nota 3', 'Nota 4', 'Nota 5'], # Labels personalizados
     'titulos': {
