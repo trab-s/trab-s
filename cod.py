@@ -450,15 +450,15 @@ with abas[4]:
         ax.set_title(CONFIG_GRAFICOS['titulos']['ranking'], fontweight='bold', fontsize=16) # NOVO: título personalizado
         ax.grid(axis='x', alpha=0.3)
 
-for i, bar in enumerate(bars):
-    width = bar.get_width()
-    ax.text(width + 0.01, bar.get_y() + bar.get_height()/2, 
-           f'{width:.2f}', va='center', fontweight='bold')
-        
         for i, bar in enumerate(bars):
             width = bar.get_width()
             ax.text(width + 0.01, bar.get_y() + bar.get_height()/2, 
                    f'{width:.2f}', va='center', fontweight='bold')
+                
+                for i, bar in enumerate(bars):
+                    width = bar.get_width()
+                    ax.text(width + 0.01, bar.get_y() + bar.get_height()/2, 
+                           f'{width:.2f}', va='center', fontweight='bold')
         
         st.pyplot(fig_ranking)
         
