@@ -15,7 +15,21 @@ SUPABASE_KEY = "sb_publishable_ggxYOSD-3KmSSiWYDrcshQ_T53QnyJz"
 
 if "foto" not in st.session_state:
     st.session_state.foto = None
-   
+
+CONFIG_GRAFICOS = {
+    'cores_barras': ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
+    'cores_pizza': ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
+    'cores_ranking': ['#FFD700', '#FFA500', '#FF8C00', '#FF6347', '#FF4500', '#DC143C', '#B22222', '#8B0000', '#696969', '#2F4F4F'], # Top 10
+    'labels_notas': ['Nota 1', 'Nota 2', 'Nota 3', 'Nota 4', 'Nota 5'], # Labels personalizados
+    'titulos': {
+        'servico_barras': '📊 Frequência Notas - Serviço',
+        'servico_pizza': '📈 Distribuição Notas - Serviço', 
+        'func_barras': '📊 Frequência Notas - Funcionário',
+        'func_pizza': '📈 Distribuição Notas - Funcionário',
+        'ranking': '🏆 TOP 10 Funcionários - Ranking'
+    }
+}
+
 # inicializar banco (se não existir)
 def init_db():
     pass  
@@ -110,32 +124,46 @@ def baixar_csv(df, nome_arquivo):
         file_name=nome_arquivo,
         mime='text/csv')
 
-def grafico_barras_frequencia(df, colunas, titulo):
+def grafico_barras_frequencia(df, colunas, titulo=""):
     fig, ax = plt.subplots(figsize=(12, 6))
     todas_notas = pd.concat([df[col].dropna() for col in colunas])
     freq = todas_notas.value_counts().sort_index()
-    colors = plt.cm.viridis(np.linspace(0, 1, len(freq)))
-    bars = ax.bar(freq.index, freq.values, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax.set_title(titulo, fontsize=16, fontweight='bold', pad=20)
+    
+    # USA CORES E LABELS PERSONALIZADOS
+    colors = CONFIG_GRAFICOS['cores_barras'][:len(freq)]
+    labels = [CONFIG_GRAFICOS['labels_notas'][i-1] for i in freq.index]
+    
+    bars = ax.bar(range(len(freq)), freq.values, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax.set_title(titulo or CONFIG_GRAFICOS['titulos'].get('servico_barras', 'Gráfico'), 
+                fontsize=16, fontweight='bold', pad=20)
     ax.set_xlabel('Nota', fontsize=12, fontweight='bold')
     ax.set_ylabel('Frequência', fontsize=12, fontweight='bold')
-    ax.set_xticks(range(1, 6))
+    ax.set_xticks(range(len(freq)))
+    ax.set_xticklabels(labels, rotation=0, fontweight='bold')
     ax.grid(axis='y', alpha=0.3, linestyle='--')
+    
     for bar in bars:
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height + 0.1, f'{int(height)}', ha='center', va='bottom', fontweight='bold', fontsize=11)
+        ax.text(bar.get_x() + bar.get_width()/2., height + 0.1, f'{int(height)}', 
+                ha='center', va='bottom', fontweight='bold', fontsize=11)
     plt.tight_layout()
     return fig
 
-def grafico_pizza_frequencia(df, colunas, titulo):
+def grafico_pizza_frequencia(df, colunas, titulo=""):
     fig, ax = plt.subplots(figsize=(10, 8))
     todas_notas = pd.concat([df[col].dropna() for col in colunas])
     freq = todas_notas.value_counts().sort_index()
-    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7']
-    wedges, texts, autotexts = ax.pie(freq.values, labels=[f'Nota {i}' for i in freq.index],
-                                     colors=colors, autopct='%1.1f%%', startangle=90,
-                                     textprops={'fontsize': 12, 'fontweight': 'bold'})
-    ax.set_title(titulo, fontsize=16, fontweight='bold', pad=20)
+    
+    # USA CORES E LABELS PERSONALIZADOS
+    colors = CONFIG_GRAFICOS['cores_pizza'][:len(freq)]
+    labels = [CONFIG_GRAFICOS['labels_notas'][i-1] for i in freq.index]
+    
+    wedges, texts, autotexts = ax.pie(freq.values, labels=labels, colors=colors, 
+                                    autopct='%1.1f%%', startangle=90,
+                                    textprops={'fontsize': 12, 'fontweight': 'bold'})
+    ax.set_title(titulo or CONFIG_GRAFICOS['titulos'].get('servico_pizza', 'Gráfico'), 
+                fontsize=16, fontweight='bold', pad=20)
+    
     for wedge in wedges:
         wedge.set_edgecolor('white')
         wedge.set_linewidth(2)
@@ -271,10 +299,12 @@ with abas[1]:
         
         col1, col2 = st.columns(2)
         with col1:
-            fig_barras = grafico_barras_frequencia(notas_servico, colunas_servico, "Gráfico de Barras")
+            fig_barras = grafico_barras_frequencia(notas_servico, colunas_servico, 
+                                                 CONFIG_GRAFICOS['titulos']['servico_barras'])
             st.pyplot(fig_barras)
         with col2:
-            fig_pizza = grafico_pizza_frequencia(notas_servico, colunas_servico, "Gráfico de Pizza")
+            fig_pizza = grafico_pizza_frequencia(notas_servico, colunas_servico, 
+                                               CONFIG_GRAFICOS['titulos']['servico_pizza'])
             st.pyplot(fig_pizza)
 
 # ------------------------------------------------------------------
@@ -316,15 +346,12 @@ with abas[2]:
         
         col1, col2 = st.columns(2)
         with col1:
-            fig_barras = grafico_barras_frequencia(
-                dados_view, colunas_funcionario, 
-                f"Gráfico de Barras - {funcionario_sel}")
+            fig_barras = grafico_barras_frequencia(dados_view, colunas_funcionario, 
+                                                 f"{CONFIG_GRAFICOS['titulos']['func_barras']} - {funcionario_sel}")
             st.pyplot(fig_barras)
-        
         with col2:
-            fig_pizza = grafico_pizza_frequencia(
-                dados_view, colunas_funcionario, 
-                f"Gráfico de Pizza - {funcionario_sel}")
+            fig_pizza = grafico_pizza_frequencia(dados_view, colunas_funcionario, 
+                                               f"{CONFIG_GRAFICOS['titulos']['func_pizza']} - {funcionario_sel}")
             st.pyplot(fig_pizza)
 
 # ------------------------------------------------------------------
@@ -415,13 +442,18 @@ with abas[4]:
         # Gráfico Ranking
         fig_ranking, ax = plt.subplots(figsize=(12, 6))
         top_10 = df_ranking.head(10)
-        colors = plt.cm.viridis(np.linspace(0, 1, len(top_10)))
+        colors = CONFIG_GRAFICOS['cores_ranking'][:len(top_10)] # NOVO: usa cores personalizadas
         bars = ax.barh(range(len(top_10)), top_10['Média Geral'], color=colors, alpha=0.8)
         ax.set_yticks(range(len(top_10)))
         ax.set_yticklabels(top_10['Funcionário'])
         ax.set_xlabel('Média Geral (0-5)')
-        ax.set_title('🏆 TOP 10 Funcionários - Ranking de Desempenho', fontweight='bold', fontsize=16)
+        ax.set_title(CONFIG_GRAFICOS['titulos']['ranking'], fontweight='bold', fontsize=16) # NOVO: título personalizado
         ax.grid(axis='x', alpha=0.3)
+
+for i, bar in enumerate(bars):
+    width = bar.get_width()
+    ax.text(width + 0.01, bar.get_y() + bar.get_height()/2, 
+           f'{width:.2f}', va='center', fontweight='bold')
         
         for i, bar in enumerate(bars):
             width = bar.get_width()
