@@ -215,14 +215,12 @@ with abas[0]:
                            type=["png", "jpg", "jpeg", "jfif"], 
                            key="foto_cad")
     
-    foto_path = None
+    foto_base64 = None
     if foto is not None:
-        # Salvar foto na pasta fotos
-        foto_path = f"fotos/{foto.name}"
-        with open(foto_path, "wb") as f:
-            f.write(foto.getbuffer())
-        st.success(f"✅ Foto salva: {foto.name}")
-        st.image(foto_path, width=150, caption="Pré-visualização")
+        # Converter foto para base64 e salvar direto no Supabase
+        foto_base64 = base64.b64encode(foto.getvalue()).decode()
+        st.success(f"✅ Foto carregada: {foto.name}")
+        st.image(foto, width=150, caption="Pré-visualização")
     
     col1, col2 = st.columns(2)
     with col1:
