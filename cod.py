@@ -454,11 +454,6 @@ with abas[4]:
             width = bar.get_width()
             ax.text(width + 0.01, bar.get_y() + bar.get_height()/2, 
                    f'{width:.2f}', va='center', fontweight='bold')
-                
-                for i, bar in enumerate(bars):
-                    width = bar.get_width()
-                    ax.text(width + 0.01, bar.get_y() + bar.get_height()/2, 
-                           f'{width:.2f}', va='center', fontweight='bold')
         
         st.pyplot(fig_ranking)
         
