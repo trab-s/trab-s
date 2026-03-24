@@ -230,13 +230,13 @@ with abas[0]:
                 data = {
                     "nome": nome.strip(), 
                     "cargo": cargo or "",
-                    "foto": foto_base64  
+                    "foto": foto_base64 if foto_base64 else None # ← ASSEGURA None se sem foto
                 }
-                conn.table('funcionarios').insert(data).execute()
-                st.success("✅ Funcionário cadastrado com sucesso!")
+                response = conn.table('funcionarios').insert(data).execute()
+                st.success("✅ CADASTRADO!")
+                st.write(f"DEBUG COD2: foto salva = {len(foto_base64) if foto_base64 else 0} chars")
                 st.rerun()
-            else:
-                st.error("*Nome é obrigatório!*")
+
     
     st.subheader("👥 Funcionários cadastrados")
     if not func.empty:
