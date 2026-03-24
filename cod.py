@@ -230,7 +230,7 @@ with abas[0]:
                 data = {
                     "nome": nome.strip(), 
                     "cargo": cargo or "",
-                    "foto": foto_path  
+                    "foto": foto_base64  
                 }
                 conn.table('funcionarios').insert(data).execute()
                 st.success("✅ Funcionário cadastrado com sucesso!")
