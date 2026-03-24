@@ -17,7 +17,7 @@ if "foto" not in st.session_state:
     st.session_state.foto = None
 
 CONFIG_GRAFICOS = {
-    'cores_barras': ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
+    'cores_barras': ['#8B0000', '#FF4500', '#FFD700', '#32CD32', '#4169E1'],
     'cores_pizza': ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
     'cores_ranking': ['#FFD700', '#FFA500', '#FF8C00', '#FF6347', '#FF4500', '#DC143C', '#B22222', '#8B0000', '#696969', '#2F4F4F'], # Top 10
     'labels_notas': ['Nota 1', 'Nota 2', 'Nota 3', 'Nota 4', 'Nota 5'], # Labels personalizados
@@ -174,30 +174,30 @@ def calcular_indices(notas_filtradas):
     if notas_filtradas.empty:
         return pd.DataFrame()
     
-    # Calcular médias por funcionário
+    # Calcular médias
     colunas_funcionario = ["n1", "n2", "n3"]
     colunas_servico = ["n4", "n5"]
     
     indices = {}
     
-    # 1. Ranking de funcionários por média geral
+    # Ranking de funcionários por média geral
     medias_func = notas_filtradas.groupby('nome')[colunas_funcionario].mean().mean(axis=1)
     indices['media_geral_func'] = medias_func.sort_values(ascending=False)
     
-    # 2. Taxa de excelência (nota 5)
+    # Taxa de excelência (nota 5)
     for col in colunas_funcionario:
         pct_excelencia = (notas_filtradas[col] == 5).mean() * 100
         indices[f'pct_excelencia_{col}'] = pct_excelencia
     
-    # 3. Média geral serviço
+    # Média geral serviço
     media_servico = notas_filtradas[colunas_servico].mean().mean()
     indices['media_servico'] = media_servico
     
-    # 4. Taxa satisfação geral (média >= 4)
+    # Taxa satisfação geral (média >= 4)
     pct_satisfacao = (notas_filtradas[colunas_funcionario].mean(axis=1) >= 4).mean() * 100
     indices['taxa_satisfacao'] = pct_satisfacao
     
-    # 5. Evolução temporal (últimos 7 dias vs período completo)
+    # Evolução temporal (últimos 7 dias vs período completo)
     if len(notas_filtradas) > 7:
         media_recente = notas_filtradas.tail(7)[colunas_funcionario].mean().mean()
         indices['evolucao_recente'] = media_recente - media_servico
@@ -247,7 +247,7 @@ with abas[0]:
     if foto is not None:
         # Converter foto para base64 e salvar direto no Supabase
         foto_base64 = base64.b64encode(foto.getvalue()).decode()
-        st.success(f"✅ Foto carregada: {foto.name}")
+        st.success(f"Foto carregada: {foto.name}")
         st.image(foto, width=150, caption="Pré-visualização")
     
     col1, col2 = st.columns(2)
@@ -264,11 +264,11 @@ with abas[0]:
                 st.success("✅ CADASTRADO!")
                 st.write(f"DEBUG COD2: foto salva = {len(foto_base64) if foto_base64 else 0} chars")
                 st.rerun()
-
-    
-    st.subheader("👥 Funcionários cadastrados")
-    if not func.empty:
-        st.dataframe(func[["id", "nome", "cargo", "foto"]], use_container_width=True)
+    with col2:
+        if st.button("Vizualizar funcionários"):
+            st.subheader("👥 Funcionários cadastrados")
+            if not func.empty:
+                st.dataframe(func[["id", "nome", "cargo", "foto"]], use_container_width=True)
 
 # ------------------------------------------------------------------
 with abas[1]:
@@ -390,7 +390,6 @@ with abas[3]:
             """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# NOVA ABA - ÍNDICES DE ANÁLISE
 with abas[4]:
     st.header("📈 Índices de Análise")
     st.text("")
