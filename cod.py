@@ -225,49 +225,49 @@ abas = st.tabs([
 
 # ------------------------------------------------------------------
 with abas[0]:
-st.header("Cadastro de Funcionários")
-
-
-# Criar pasta fotos se não existir
-if not os.path.exists("fotos"):
-    os.makedirs("fotos")
-
-col_nome, col_cargo = st.columns(2)
-with col_nome:
-    nome = st.text_input("Nome Completo", key="n")
-with col_cargo:
-    cargo = st.text_input("Cargo", key="c")
-
-foto = st.file_uploader("Foto (opcional)", 
-                       type=["png", "jpg", "jpeg", "jfif"], 
-                       key="foto_cad")
-
-foto_base64 = None
-if foto is not None:
-    # Converter foto para base64 e salvar direto no Supabase
-    foto_base64 = base64.b64encode(foto.getvalue()).decode()
-    st.success(f"Foto carregada: {foto.name}")
-    st.image(foto, width=150, caption="Pré-visualização")
-
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("👤 Cadastrar Funcionário", type="primary", use_container_width=True):
-        if nome.strip():
-            conn = conectar()
-            data = {
-                "nome": nome.strip(), 
-                "cargo": cargo or "",
-                "foto": foto_base64 if foto_base64 else None # ← ASSEGURA None se sem foto
-            }
-            response = conn.table('funcionarios').insert(data).execute()
-            st.success("✅ CADASTRADO!")
-            st.write(f"DEBUG COD2: foto salva = {len(foto_base64) if foto_base64 else 0} chars")
-            st.rerun()
-with col2:
-    if st.button("Vizualizar funcionários"):
-        st.subheader("👥 Funcionários cadastrados")
-        if not func.empty:
-            st.dataframe(func[["id", "nome", "cargo", "foto"]], use_container_width=True)
+    st.header("Cadastro de Funcionários")
+    
+    
+    # Criar pasta fotos se não existir
+    if not os.path.exists("fotos"):
+        os.makedirs("fotos")
+    
+    col_nome, col_cargo = st.columns(2)
+    with col_nome:
+        nome = st.text_input("Nome Completo", key="n")
+    with col_cargo:
+        cargo = st.text_input("Cargo", key="c")
+    
+    foto = st.file_uploader("Foto (opcional)", 
+                           type=["png", "jpg", "jpeg", "jfif"], 
+                           key="foto_cad")
+    
+    foto_base64 = None
+    if foto is not None:
+        # Converter foto para base64 e salvar direto no Supabase
+        foto_base64 = base64.b64encode(foto.getvalue()).decode()
+        st.success(f"Foto carregada: {foto.name}")
+        st.image(foto, width=150, caption="Pré-visualização")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("👤 Cadastrar Funcionário", type="primary", use_container_width=True):
+            if nome.strip():
+                conn = conectar()
+                data = {
+                    "nome": nome.strip(), 
+                    "cargo": cargo or "",
+                    "foto": foto_base64 if foto_base64 else None # ← ASSEGURA None se sem foto
+                }
+                response = conn.table('funcionarios').insert(data).execute()
+                st.success("✅ CADASTRADO!")
+                st.write(f"DEBUG COD2: foto salva = {len(foto_base64) if foto_base64 else 0} chars")
+                st.rerun()
+    with col2:
+        if st.button("Vizualizar funcionários"):
+            st.subheader("👥 Funcionários cadastrados")
+            if not func.empty:
+                st.dataframe(func[["id", "nome", "cargo", "foto"]], use_container_width=True)
 
 # ------------------------------------------------------------------
 with abas[1]:
