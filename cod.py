@@ -202,8 +202,8 @@ def calcular_indices(notas_filtradas):
     
     return indices
 
-get_base64("fundoazulrev.png")
-set_background("fundoazulrev.png")
+get_base64("fundoazulrev.PNG")
+set_background("fundoazulrev.PNG")
 add_logo_top_right("Logosenai.png")
 
 init_db()
