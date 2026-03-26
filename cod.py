@@ -228,126 +228,86 @@ abas = st.tabs([
 with abas[0]:
     st.header("Cadastro de Funcionários")
     
-    # FUNÇÃO PARA RECARREGAR FUNCIONÁRIOS
-    @st.cache_data(ttl=1)  # Cache de 1 segundo para performance
-    def get_funcionarios():
+    # RECARREGA SEMPRE OS DADOS
+    def reload_func():
         conn = conectar()
         resp = conn.table('funcionarios').select("*").execute()
         return pd.DataFrame(resp.data or [])
     
-    func = get_funcionarios()  # SEMPRE ATUALIZADO
+    func = reload_func()
     
-    # Criar pasta fotos se não existir
-    if not os.path.exists("fotos"):
-        os.makedirs("fotos")
+    st.markdown("---")
     
-    # MODO DE OPERAÇÃO
-    modo = st.radio("👇 Escolha a ação:", 
-                   ["➕ Cadastrar", "✏️ Editar", "🗑️ Deletar", "👀 Visualizar"],
-                   horizontal=True, key="modo_01")
+    # MODO
+    modo = st.radio("🎯 Ação:", ["➕ Cadastrar", "✏️ Editar", "🗑️ Deletar"], key="modo_final")
     
-    # FORMULÁRIO DE DADOS
-    col_nome, col_cargo = st.columns(2)
-    nome = col_nome.text_input("👤 Nome Completo", key="nome_01")
-    cargo = col_cargo.text_input("💼 Cargo", key="cargo_01")
+    # FORMULÁRIO
+    col1, col2 = st.columns(2)
+    nome = col1.text_input("👤 Nome:", key="nome_final")
+    cargo = col2.text_input("💼 Cargo:", key="cargo_final")
     
-    foto = st.file_uploader("📸 Foto (opcional)", 
-                           type=["png", "jpg", "jpeg"], 
-                           key="foto_01")
+    foto_file = st.file_uploader("📸 Foto:", type=['png','jpg','jpeg'], key="foto_final")
+    foto_b64 = None
+    if foto_file:
+        foto_b64 = base64.b64encode(foto_file.read()).decode()
+        st.image(foto_file, width=100)
     
-    # PROCESSAR FOTO
-    foto_base64 = None
-    if foto is not None:
-        foto_base64 = base64.b64encode(foto.getvalue()).decode()
-        st.success(f"✅ Foto: {foto.name}")
-        st.image(foto, width=120)
-    
-    # SELETOR DE FUNCIONÁRIO (EDITAR/DELETAR)
-    if modo in ["✏️ Editar", "🗑️ Deletar"]:
-        if func.empty:
-            st.warning("❌ Cadastre um funcionário primeiro!")
-        else:
-            st.subheader("🎯 Selecione:")
-            funcionario_sel = st.selectbox("Funcionário:", func["nome"].tolist(), key="sel_01")
-            
-            # MOSTRAR DADOS ATUAIS
-            if funcionario_sel:
-                func_sel = func[func["nome"] == funcionario_sel].iloc[0]
-                st.markdown(f"""
-                **ID:** `{func_sel['id']}`  
-                **Nome atual:** {func_sel['nome']}  
-                **Cargo atual:** {func_sel['cargo']}
-                """)
-                
-                if func_sel.get('foto'):
-                    try:
-                        st.image(f"data:image/png;base64,{func_sel['foto']}", width=120, caption="Foto atual")
-                    except:
-                        st.write("❌ Erro ao exibir foto")
-    
-    # BOTÕES DE AÇÃO
-    col_btn1, col_btn2 = st.columns(2)
+    st.markdown("---")
     
     conn = conectar()
     
     # CADASTRAR
     if modo == "➕ Cadastrar":
-        if col_btn1.button("✅ CADASTRAR", type="primary", use_container_width=True, key="cad_01"):
-            if nome.strip():
-                data = {
-                    "nome": nome.strip(),
-                    "cargo": cargo or None,
-                    "foto": foto_base64
-                }
-                result = conn.table('funcionarios').insert(data).execute()
-                if result.data:
-                    st.success(f"✅ CADASTRADO! ID: {result.data[0]['id']}")
-                    st.rerun()
-                else:
-                    st.error("❌ Erro no cadastro")
+        col1, col2 = st.columns(2)
+        if col1.button("✅ CADASTRAR", use_container_width=True):
+            if nome:
+                data = {"nome": nome, "cargo": cargo or "", "foto": foto_b64}
+                conn.table('funcionarios').insert(data).execute()
+                st.success("✅ Cadastrado!")
+                st.rerun()
+    
+    # LISTA PARA SELEÇÃO
+    if modo in ["✏️ Editar", "🗑️ Deletar"] and not func.empty:
+        st.subheader("👥 Selecione:")
+        selected_name = st.selectbox("", func['nome'].tolist(), key="select_final")
+        selected_id = func[func['nome'] == selected_name]['id'].iloc[0]
+        
+        # MOSTRA DADOS ATUAIS
+        func_sel = func[func['nome'] == selected_name].iloc[0]
+        col1, col2 = st.columns(2)
+        col1.metric("ID", selected_id)
+        col2.metric("Nome atual", func_sel['nome'])
+        if func_sel['foto']:
+            st.image(f"data:image/png;base64,{func_sel['foto']}", width=100)
     
     # EDITAR
-    elif modo == "✏️ Editar" and 'funcionario_sel' in locals():
-        func_id = func[func["nome"] == funcionario_sel]["id"].iloc[0]
-        if col_btn1.button("💾 ATUALIZAR", type="primary", use_container_width=True, key="edit_01"):
-            data = {
-                "nome": nome.strip(),
-                "cargo": cargo or None,
-                "foto": foto_base64
-            }
-            result = conn.table('funcionarios').update(data).eq('id', func_id).execute()
-            if result.data:
-                st.success("✅ ATUALIZADO!")
+    if modo == "✏️ Editar" and not func.empty:
+        selected_name = st.session_state.get('select_final', func['nome'].iloc[0] if not func.empty else '')
+        if selected_name:
+            selected_id = func[func['nome'] == selected_name]['id'].iloc[0]
+            if st.button("💾 ATUALIZAR", use_container_width=True, key="update_final"):
+                data = {"nome": nome, "cargo": cargo or "", "foto": foto_b64}
+                response = conn.table('funcionarios').update(data).eq('id', selected_id).execute()
+                st.success(f"✅ Atualizado! Count: {response.count}")
                 st.rerun()
-            else:
-                st.error("❌ Erro na atualização")
     
     # DELETAR
-    elif modo == "🗑️ Deletar" and 'funcionario_sel' in locals():
-        func_id = func[func["nome"] == funcionario_sel]["id"].iloc[0]
-        if col_btn1.button("🗑️ DELETAR", type="primary", use_container_width=True, key="del_01"):
-            result = conn.table('funcionarios').delete().eq('id', func_id).execute()
-            if result.count > 0:
-                st.success("✅ DELETADO!")
+    if modo == "🗑️ Deletar" and not func.empty:
+        selected_name = st.session_state.get('select_final', func['nome'].iloc[0] if not func.empty else '')
+        if selected_name:
+            selected_id = func[func['nome'] == selected_name]['id'].iloc[0]
+            if st.button("🗑️ DELETAR", type="primary", use_container_width=True, key="delete_final"):
+                response = conn.table('funcionarios').delete().eq('id', selected_id).execute()
+                st.success(f"✅ Deletado! Count: {response.count}")
                 st.rerun()
-            else:
-                st.error("❌ Erro na deleção")
     
-    # VISUALIZAR (SEMPRE NO FINAL)
+    # LISTA ATUALIZADA
     st.markdown("---")
-    st.subheader(f"📋 Funcionários ({len(func)})")
-    
+    st.subheader("📋 Todos os Funcionários")
     if not func.empty:
-        # DataFrame com foto preview
-        func_display = func[["id", "nome", "cargo"]].copy()
-        st.dataframe(func_display, use_container_width=True, hide_index=True)
-        
-        # Botão para forçar reload
-        if col_btn2.button("🔄 Atualizar Lista", key="reload_01"):
-            st.cache_data.clear()
-            st.rerun()
+        st.dataframe(func[['id','nome','cargo']], use_container_width=True)
     else:
-        st.info("👤 Nenhum funcionário cadastrado")
+        st.info("Nenhum funcionário")
 
 # ------------------------------------------------------------------
 with abas[1]:
