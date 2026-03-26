@@ -129,7 +129,6 @@ def grafico_barras_frequencia(df, colunas, titulo=""):
     todas_notas = pd.concat([df[col].dropna() for col in colunas])
     freq = todas_notas.value_counts().sort_index()
     
-    # USA CORES E LABELS PERSONALIZADOS
     colors = CONFIG_GRAFICOS['cores_barras'][:len(freq)]
     labels = [CONFIG_GRAFICOS['labels_notas'][i-1] for i in freq.index]
     
@@ -154,7 +153,6 @@ def grafico_pizza_frequencia(df, colunas, titulo=""):
     todas_notas = pd.concat([df[col].dropna() for col in colunas])
     freq = todas_notas.value_counts().sort_index()
     
-    # USA CORES E LABELS PERSONALIZADOS
     colors = CONFIG_GRAFICOS['cores_pizza'][:len(freq)]
     labels = [CONFIG_GRAFICOS['labels_notas'][i-1] for i in freq.index]
     
@@ -204,8 +202,8 @@ def calcular_indices(notas_filtradas):
     
     return indices
 
-get_base64("fundoazulrev.PNG")
-set_background("fundoazulrev.PNG")
+get_base64("fundoazulrev.png")
+set_background("fundoazulrev.png")
 add_logo_top_right("Logosenai.png")
 
 init_db()
