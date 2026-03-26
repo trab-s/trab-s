@@ -224,7 +224,6 @@ abas = st.tabs([
     "📈 Índices de Análise"])
 
 # ------------------------------------------------------------------
-# ------------------------------------------------------------------
 with abas[0]:
     st.header("Cadastro de Funcionários")
     
@@ -232,8 +231,7 @@ with abas[0]:
     if not os.path.exists("fotos"):
         os.makedirs("fotos")
     
-    # SELEÇÃO DE MODO: Cadastro, Editar ou Visualizar
-    modo = st.radio("👇 Escolha a ação:", 
+    modo = st.radio(" Escolha a ação:", 
                    ["➕ Cadastrar Novo", "✏️ Editar Existente", "🗑️ Deletar", "👀 Visualizar"],
                    horizontal=True, key="modo_cadastro")
     
@@ -254,14 +252,14 @@ with abas[0]:
         st.success(f"Foto carregada: {foto.name}")
         st.image(foto, width=150, caption="Pré-visualização")
     
-    # SELECTBOX PARA SELECIONAR FUNCIONÁRIO (aparece em Editar/Deletar)
+    # Editar/Deletar
     funcionario_sel = None
     if modo in ["✏️ Editar Existente", "🗑️ Deletar"]:
         st.subheader("👥 Selecione o funcionário:")
         nomes_func = ["-- Selecione --"] + func["nome"].tolist() if not func.empty else ["-- Sem funcionários --"]
         funcionario_sel = st.selectbox("Funcionário:", nomes_func, key="func_sel")
         
-        # MOSTRAR DADOS ATUAIS DO FUNCIONÁRIO SELECIONADO
+        # Dados do selecionado
         if funcionario_sel and funcionario_sel != "-- Selecione --" and not func.empty:
             func_dados = func[func["nome"] == funcionario_sel].iloc[0]
             st.info(f"**Dados atuais:** Nome: {func_dados['nome']}, Cargo: {func_dados['cargo']}")
@@ -270,7 +268,6 @@ with abas[0]:
     
     col1, col2, col3 = st.columns([1,1,1])
     
-    # BOTÕES CONDICIONAIS POR MODO
     if modo == "➕ Cadastrar Novo":
         with col1:
             if st.button("👤 Cadastrar Funcionário", type="primary", use_container_width=True, key="btn_cad"):
@@ -311,10 +308,9 @@ with abas[0]:
                 response = conn.table('funcionarios').delete().eq('id', func_id).execute()
                 st.success("✅ DELETADO!")
                 st.rerun()
-    
-    # BOTÃO VISUALIZAR SEMPRE DISPONÍVEL
+    # Botão fixo
     with col2:
-        if st.button("👀 Visualizar Funcionários", use_container_width=True, key="btn_view"):
+        if st.button("Visualizar Funcionários", use_container_width=True, key="btn_view"):
             st.subheader("👥 Funcionários cadastrados")
             if not func.empty:
                 st.dataframe(func[["id", "nome", "cargo"]], use_container_width=True)
