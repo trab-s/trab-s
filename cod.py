@@ -224,12 +224,18 @@ abas = st.tabs([
     "📈 Índices de Análise"])
 
 # ------------------------------------------------------------------
+# ------------------------------------------------------------------
 with abas[0]:
     st.header("Cadastro de Funcionários")
     
     # Criar pasta fotos se não existir
     if not os.path.exists("fotos"):
         os.makedirs("fotos")
+    
+    # SELEÇÃO DE MODO: Cadastro, Editar ou Visualizar
+    modo = st.radio("👇 Escolha a ação:", 
+                   ["➕ Cadastrar Novo", "✏️ Editar Existente", "🗑️ Deletar", "👀 Visualizar"],
+                   horizontal=True, key="modo_cadastro")
     
     col_nome, col_cargo = st.columns(2)
     with col_nome:
@@ -248,25 +254,76 @@ with abas[0]:
         st.success(f"Foto carregada: {foto.name}")
         st.image(foto, width=150, caption="Pré-visualização")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("👤 Cadastrar Funcionário", type="primary", use_container_width=True):
-            if nome.strip():
+    # SELECTBOX PARA SELECIONAR FUNCIONÁRIO (aparece em Editar/Deletar)
+    funcionario_sel = None
+    if modo in ["✏️ Editar Existente", "🗑️ Deletar"]:
+        st.subheader("👥 Selecione o funcionário:")
+        nomes_func = ["-- Selecione --"] + func["nome"].tolist() if not func.empty else ["-- Sem funcionários --"]
+        funcionario_sel = st.selectbox("Funcionário:", nomes_func, key="func_sel")
+        
+        # MOSTRAR DADOS ATUAIS DO FUNCIONÁRIO SELECIONADO
+        if funcionario_sel and funcionario_sel != "-- Selecione --" and not func.empty:
+            func_dados = func[func["nome"] == funcionario_sel].iloc[0]
+            st.info(f"**Dados atuais:** Nome: {func_dados['nome']}, Cargo: {func_dados['cargo']}")
+            if func_dados['foto']:
+                st.image(f"data:image/png;base64,{func_dados['foto']}", width=150, caption="Foto atual")
+    
+    col1, col2, col3 = st.columns([1,1,1])
+    
+    # BOTÕES CONDICIONAIS POR MODO
+    if modo == "➕ Cadastrar Novo":
+        with col1:
+            if st.button("👤 Cadastrar Funcionário", type="primary", use_container_width=True, key="btn_cad"):
+                if nome.strip():
+                    conn = conectar()
+                    data = {
+                        "nome": nome.strip(), 
+                        "cargo": cargo or "",
+                        "foto": foto_base64 if foto_base64 else None
+                    }
+                    response = conn.table('funcionarios').insert(data).execute()
+                    st.success("✅ CADASTRADO!")
+                    st.rerun()
+    
+    elif modo == "✏️ Editar Existente" and funcionario_sel and funcionario_sel != "-- Selecione --":
+        func_id = func[func["nome"] == funcionario_sel]["id"].iloc[0]
+        with col1:
+            if st.button("💾 Atualizar Dados", type="primary", use_container_width=True, key="btn_upd"):
+                if nome.strip():
+                    conn = conectar()
+                    data_update = {
+                        "nome": nome.strip(),
+                        "cargo": cargo or "",
+                        "foto": foto_base64 if foto_base64 else None  # None remove foto, ou manter atual
+                    }
+                    response = conn.table('funcionarios').update(data_update).eq('id', func_id).execute()
+                    st.success("✅ ATUALIZADO!")
+                    st.rerun()
+    
+    elif modo == "🗑️ Deletar" and funcionario_sel and funcionario_sel != "-- Selecione --":
+        func_id = func[func["nome"] == funcionario_sel]["id"].iloc[0]
+        with col1:
+            if st.button("🗑️ CONFIRMAR DELEÇÃO", type="primary", 
+                        use_container_width=True, 
+                        help="⚠️ Esta ação é irreversível!", 
+                        key="btn_del"):
                 conn = conectar()
-                data = {
-                    "nome": nome.strip(), 
-                    "cargo": cargo or "",
-                    "foto": foto_base64 if foto_base64 else None # ← ASSEGURA None se sem foto
-                }
-                response = conn.table('funcionarios').insert(data).execute()
-                st.success("✅ CADASTRADO!")
-                st.write(f"DEBUG COD2: foto salva = {len(foto_base64) if foto_base64 else 0} chars")
+                response = conn.table('funcionarios').delete().eq('id', func_id).execute()
+                st.success("✅ DELETADO!")
                 st.rerun()
+    
+    # BOTÃO VISUALIZAR SEMPRE DISPONÍVEL
     with col2:
-        if st.button("Vizualizar funcionários"):
+        if st.button("👀 Visualizar Funcionários", use_container_width=True, key="btn_view"):
             st.subheader("👥 Funcionários cadastrados")
             if not func.empty:
-                st.dataframe(func[["id", "nome", "cargo", "foto"]], use_container_width=True)
+                st.dataframe(func[["id", "nome", "cargo"]], use_container_width=True)
+                # Botão para recarregar dados
+                if st.button("🔄 Recarregar lista", key="btn_reload"):
+                    notas, obs, func = carregar_dados_completos()
+                    st.rerun()
+            else:
+                st.warning("❌ Nenhum funcionário cadastrado")
 
 # ------------------------------------------------------------------
 with abas[1]:
