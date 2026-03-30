@@ -15,9 +15,7 @@ SUPABASE_KEY = "sb_publishable_ggxYOSD-3KmSSiWYDrcshQ_T53QnyJz"
 
 if "foto" not in st.session_state:
     st.session_state.foto = None
-if "funcionario_editando" not in st.session_state:
-    st.session_state.funcionario_editando = None
-    
+
 CONFIG_GRAFICOS = {
     'cores_barras': ['#8B0000', '#FF4500', '#FFD700', '#32CD32', '#4682B4'],
     'cores_pizza': ['#8B0000', '#FF4500', '#FFD700', '#32CD32', '#4682B4'],
@@ -227,151 +225,49 @@ abas = st.tabs([
 
 # ------------------------------------------------------------------
 with abas[0]:
-    st.header("👥 Gerenciamento de Funcionários")
+    st.header("Cadastro de Funcionários")
+    
     
     # Criar pasta fotos se não existir
     if not os.path.exists("fotos"):
         os.makedirs("fotos")
     
-    # Botões de ação principal
-    col_btn1, col_btn2, col_btn3 = st.columns(3)
-    
-    # Recarregar dados
-    if col_btn1.button("🔄 Recarregar Lista", use_container_width=True):
-        notas, obs, func = carregar_dados_completos()
-        st.success("Lista atualizada!")
-        st.rerun()
-    
-    # Limpar edição
-    if col_btn2.button("🗑️ Novo Cadastro", use_container_width=True):
-        st.session_state.funcionario_editando = None
-        st.rerun()
-    
-    # Visualizar lista
-    if col_btn3.button("📋 Ver Todos", use_container_width=True):
-        st.session_state.funcionario_editando = "lista"
-        st.rerun()
-    
-    # Formulário de cadastro/atualização
-    st.subheader("📝 Formulário")
-    
-    col_nome, col_cargo, col_id = st.columns([3, 3, 2])
+    col_nome, col_cargo = st.columns(2)
     with col_nome:
-        nome = st.text_input("Nome Completo", 
-                           value=st.session_state.funcionario_editando['nome'] if st.session_state.funcionario_editando and st.session_state.funcionario_editando != "lista" else "",
-                           key="n")
+        nome = st.text_input("Nome Completo", key="n")
     with col_cargo:
-        cargo = st.text_input("Cargo", 
-                            value=st.session_state.funcionario_editando['cargo'] if st.session_state.funcionario_editando and st.session_state.funcionario_editando != "lista" else "",
-                            key="c")
-    with col_id:
-        if st.session_state.funcionario_editando and st.session_state.funcionario_editando != "lista":
-            st.info(f"🆔 ID: **{st.session_state.funcionario_editando['id']}**")
+        cargo = st.text_input("Cargo", key="c")
     
-    foto = st.file_uploader("📸 Foto (opcional)", 
+    foto = st.file_uploader("Foto (opcional)", 
                            type=["png", "jpg", "jpeg", "jfif"], 
                            key="foto_cad")
     
     foto_base64 = None
-    foto_atual = None
-    if st.session_state.funcionario_editando and st.session_state.funcionario_editando != "lista":
-        foto_atual = st.session_state.funcionario_editando.get('foto')
-        if foto_atual:
-            st.image(f"data:image/png;base64,{foto_atual}", width=150, caption="Foto atual")
-    
     if foto is not None:
+        # Converter foto para base64 e salvar direto no Supabase
         foto_base64 = base64.b64encode(foto.getvalue()).decode()
-        st.success(f"✅ Foto carregada: {foto.name}")
-        st.image(foto, width=150, caption="Nova foto")
+        st.success(f"Foto carregada: {foto.name}")
+        st.image(foto, width=150, caption="Pré-visualização")
     
-    # Botões de ação do formulário
-    col1, col2, col3 = st.columns(3)
-    
-    if col1.button("👤 Cadastrar Novo", type="primary", use_container_width=True):
-        if nome.strip():
-            conn = conectar()
-            data = {
-                "nome": nome.strip(), 
-                "cargo": cargo or "",
-                "foto": foto_base64 if foto_base64 else None
-            }
-            response = conn.table('funcionarios').insert(data).execute()
-            if response.data:
-                st.success("✅ Funcionário cadastrado com sucesso!")
-                st.session_state.funcionario_editando = None
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("👤 Cadastrar Funcionário", type="primary", use_container_width=True):
+            if nome.strip():
+                conn = conectar()
+                data = {
+                    "nome": nome.strip(), 
+                    "cargo": cargo or "",
+                    "foto": foto_base64 if foto_base64 else None # ← ASSEGURA None se sem foto
+                }
+                response = conn.table('funcionarios').insert(data).execute()
+                st.success("✅ CADASTRADO!")
+                st.write(f"DEBUG COD2: foto salva = {len(foto_base64) if foto_base64 else 0} chars")
                 st.rerun()
-            else:
-                st.error("❌ Erro ao cadastrar!")
-    
-    if (st.session_state.funcionario_editando and 
-        st.session_state.funcionario_editando != "lista" and
-        col2.button("✏️ Atualizar", type="secondary", use_container_width=True)):
-        
-        conn = conectar()
-        data_update = {
-            "nome": nome.strip(),
-            "cargo": cargo or "",
-            "foto": foto_base64 if foto_base64 else foto_atual  # Mantém foto atual se não trocar
-        }
-        response = conn.table('funcionarios').update(data_update)\
-                      .eq('id', st.session_state.funcionario_editando['id'])\
-                      .execute()
-        
-        if response.data:
-            st.success("✅ Funcionário atualizado com sucesso!")
-            st.session_state.funcionario_editando = None
-            st.rerun()
-        else:
-            st.error("❌ Erro ao atualizar!")
-    
-    if (st.session_state.funcionario_editando and 
-        st.session_state.funcionario_editando != "lista" and
-        col3.button("❌ Cancelar", type="secondary", use_container_width=True)):
-        st.session_state.funcionario_editando = None
-        st.rerun()
-    
-    if st.session_state.funcionario_editando == "lista" or not func.empty:
-        st.subheader("👥 Lista de Funcionários")
-        
-        if func.empty:
-            st.warning("Nenhum funcionário cadastrado.")
-        else:
-            for idx, row in func.iterrows():
-                with st.container():
-                    col_info, col_foto, col_acoes = st.columns([3, 1, 2])
-                    
-                    with col_info:
-                        st.markdown(f"**{row['nome']}**")
-                        st.caption(f"📋 {row['cargo']}")
-                    
-                    with col_foto:
-                        if row['foto']:
-                            st.image(f"data:image/png;base64,{row['foto']}", width=80)
-                    
-                    with col_acoes:
-                        col_edit, col_del = st.columns(2)
-
-                        if col_edit.button(f"✏️", key=f"edit_{row['id']}", help="Editar"):
-                            st.session_state.funcionario_editando = row.to_dict()
-                            st.rerun()
-                        
-                        if col_del.button(f"🗑️", key=f"del_{row['id']}", help="Excluir"):
-                            conn = conectar()
-                            response = conn.table('funcionarios').delete()\
-                                          .eq('id', row['id'])\
-                                          .execute()
-                            
-                            if response.data:
-                                st.success(f"✅ {row['nome']} excluído!")
-                                # Recarregar dados
-                                notas, obs, func = carregar_dados_completos()
-                                st.rerun()
-                            else:
-                                st.error("❌ Erro ao excluir!")
-            
-            if st.checkbox("Mostrar tabela completa"):
-                st.dataframe(func[["id", "nome", "cargo"]], use_container_width=True)
-
+    with col2:
+        if st.button("Vizualizar funcionários"):
+            st.subheader("👥 Funcionários cadastrados")
+            if not func.empty:
+                st.dataframe(func[["id", "nome", "cargo", "foto"]], use_container_width=True)
 
 # ------------------------------------------------------------------
 with abas[1]:
