@@ -15,7 +15,9 @@ SUPABASE_KEY = "sb_publishable_ggxYOSD-3KmSSiWYDrcshQ_T53QnyJz"
 
 if "foto" not in st.session_state:
     st.session_state.foto = None
-
+if "funcionario_editando" not in st.session_state:
+    st.session_state.funcionario_editando = None
+    
 CONFIG_GRAFICOS = {
     'cores_barras': ['#8B0000', '#FF4500', '#FFD700', '#32CD32', '#4682B4'],
     'cores_pizza': ['#8B0000', '#FF4500', '#FFD700', '#32CD32', '#4682B4'],
