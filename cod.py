@@ -342,7 +342,7 @@ with abas[1]:
     else:
         notas_servico = notas.copy()
         
-    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary", key = "aba1"):
         if data_inicio and data_fim:
             conn = conectar()
             # CORRIGIDO: Filtro de data no formato ISO
@@ -392,7 +392,7 @@ with abas[2]:
     else:
         notas_filtradas = notas.copy()
         
-    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary", key = "aba2"):
         if data_inicio and data_fim:
             conn = conectar()
             # CORRIGIDO: Filtro de data no formato ISO
@@ -452,7 +452,7 @@ with abas[3]:
     else:
         obs_filtradas = obs.copy()
         
-    if st.button("🗑️ EXCLUIR observações deste período", type="secondary"):
+    if st.button("🗑️ EXCLUIR observações deste período", type="secondary", key = "aba3"):
         if data_inicio and data_fim:
             conn = conectar()
             data_inicio_str = f"{data_inicio}T00:00:00"
@@ -499,7 +499,7 @@ with abas[4]:
                              (notas["data_hora"].dt.date <= data_fim_idx)].copy()
     else:
         notas_analise = notas.copy()
-    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary", key = "aba4"):
         if data_inicio and data_fim:
             conn = conectar()
             # CORRIGIDO: Filtro de data no formato ISO
