@@ -80,35 +80,33 @@ def conectar():
 def carregar_dados_completos():
     conn = conectar()
     
+    # Funcionários
     func_resp = conn.table('funcionarios').select("*").execute()
     func = pd.DataFrame(func_resp.data or [])
     
-    notas_resp = conn.table('notas').select("*, funcionarios(nome, cargo)").execute()
+    # Notas com join correto
+    notas_resp = conn.table('notas').select("*, funcionarios(nome, cargo, id)").execute()
     notas_list = notas_resp.data or []
     
     if notas_list:
         notas = pd.json_normalize(notas_list)
-
         if 'funcionarios.nome' in notas.columns:
             notas = notas.rename(columns={'funcionarios.nome': 'nome'})
-            
-        elif 'funcionarios' in notas.columns:
-            notas['nome'] = notas['funcionarios'].apply(lambda x: x['nome'] if x else None)
-            notas = notas.drop('funcionarios', axis=1)
+        notas['funcionario_id'] = notas.get('funcionarios.id', None)
+        notas = notas.drop(['funcionarios'], axis=1, errors='ignore')
     else:
         notas = pd.DataFrame()
     
-    obs_resp = conn.table('observacoes').select("*, funcionarios(nome)").execute()
+    # Observações com join correto
+    obs_resp = conn.table('observacoes').select("*, funcionarios(nome, id)").execute()
     obs_list = obs_resp.data or []
     
     if obs_list:
         obs = pd.json_normalize(obs_list)
-
         if 'funcionarios.nome' in obs.columns:
             obs = obs.rename(columns={'funcionarios.nome': 'nome'})
-        elif 'funcionarios' in obs.columns:
-            obs['nome'] = obs['funcionarios'].apply(lambda x: x['nome'] if x else None)
-            obs = obs.drop('funcionarios', axis=1)
+        obs['funcionario_id'] = obs.get('funcionarios.id', None)
+        obs = obs.drop(['funcionarios'], axis=1, errors='ignore')
     else:
         obs = pd.DataFrame()
     
@@ -208,9 +206,19 @@ add_logo_top_right("Logosenai.png")
 
 init_db()
 notas, obs, func = carregar_dados_completos()
+@st.cache_data(ttl=300) # Cache de 5min
+def carregar_dados_com_cache():
+    try:
+        return carregar_dados_completos()
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {str(e)}")
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
 if st.button("🔄 Recarregar Dados", key="recarregar"):
+    st.cache_data.clear() # Limpa cache
     notas, obs, func = carregar_dados_completos()
     st.success("✅ Dados recarregados!")
+    st.rerun()
 
 if not notas.empty:
     notas["data_hora"] = pd.to_datetime(notas["data_hora"])
@@ -275,11 +283,11 @@ with abas[0]:
     if not func.empty:
         col_btns, col_sel = st.columns([1, 3])
         
-        # Selecionar funcionário para editar/excluir
         func_sel = col_sel.selectbox("Selecione funcionário:", 
                                     func['nome'].tolist(), key="func_sel")
         
-        func_id = func[func['nome'] == func_sel]['id'].iloc[0] if func_sel else None
+        func_sel_row = func[func['nome'] == func_sel].iloc[0]
+        func_id = func_sel_row['id']
         
         col_edit, col_del = st.columns(2)
         
@@ -287,7 +295,7 @@ with abas[0]:
             st.info("✏️ **Editar**")
             novo_nome = st.text_input("Novo nome:", value=func_sel, key=f"edit_nome_{func_id}")
             novo_cargo = st.text_input("Novo cargo:", 
-                                      value=func[func['nome']==func_sel]['cargo'].iloc[0], 
+                                      value=func_sel_row['cargo'], 
                                       key=f"edit_cargo_{func_id}")
             
             if st.button(f"🔄 Atualizar {func_sel}", key=f"update_{func_id}"):
@@ -303,23 +311,21 @@ with abas[0]:
             st.warning("🗑️ **Excluir**")
             if st.button(f"❌ EXCLUIR {func_sel}", 
                         key=f"delete_{func_id}", 
-                        type="secondary",
-                        use_container_width=True):
+                        type="secondary"):
                 conn = conectar()
                 
-                # 1. Excluir notas relacionadas
+                # 1. Excluir notas (usar ID direto)
                 conn.table('notas').delete().eq('funcionarios', func_id).execute()
                 
-                # 2. Excluir observações relacionadas  
+                # 2. Excluir observações
                 conn.table('observacoes').delete().eq('funcionarios', func_id).execute()
                 
                 # 3. Excluir funcionário
                 conn.table('funcionarios').delete().eq('id', func_id).execute()
                 
-                st.error(f"🗑️ {func_sel} e todos os dados relacionados EXCLUÍDOS!")
+                st.error(f"🗑️ {func_sel} EXCLUÍDO!")
                 st.rerun()
-    else:
-        st.info("👤 Nenhum funcionário cadastrado")
+
 
 # ------------------------------------------------------------------
 with abas[1]:
@@ -336,11 +342,15 @@ with abas[1]:
     else:
         notas_servico = notas.copy()
         
-    if st.button("🗑️ EXCLUIR dados deste período", type="secondary", key = "aba1"):
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
         if data_inicio and data_fim:
             conn = conectar()
-            deleted = conn.table('notas').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
-            st.error(f"🗑️ {len(deleted.data)} avaliações de serviço EXCLUÍDAS do período!")
+            # CORRIGIDO: Filtro de data no formato ISO
+            data_inicio_str = f"{data_inicio}T00:00:00"
+            data_fim_str = f"{data_fim}T23:59:59"
+            
+            deleted = conn.table('notas').delete().gte('data_hora', data_inicio_str).lte('data_hora', data_fim_str).execute()
+            st.error(f"🗑️ {len(deleted.data)} registros EXCLUÍDOS!")
             st.rerun()
         else:
             st.warning("⚠️ Selecione o período primeiro")
@@ -382,11 +392,15 @@ with abas[2]:
     else:
         notas_filtradas = notas.copy()
         
-    if st.button("🗑️ EXCLUIR dados deste período", type="secondary", key = "aba2"):
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
         if data_inicio and data_fim:
             conn = conectar()
-            deleted = conn.table('notas').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
-            st.error(f"🗑️ {len(deleted.data)} avaliações EXCLUÍDAS do período!")
+            # CORRIGIDO: Filtro de data no formato ISO
+            data_inicio_str = f"{data_inicio}T00:00:00"
+            data_fim_str = f"{data_fim}T23:59:59"
+            
+            deleted = conn.table('notas').delete().gte('data_hora', data_inicio_str).lte('data_hora', data_fim_str).execute()
+            st.error(f"🗑️ {len(deleted.data)} registros EXCLUÍDOS!")
             st.rerun()
         else:
             st.warning("⚠️ Selecione o período primeiro")
@@ -438,11 +452,14 @@ with abas[3]:
     else:
         obs_filtradas = obs.copy()
         
-    if st.button("🗑️ EXCLUIR observações deste período", type="secondary", key = "aba3"):
+    if st.button("🗑️ EXCLUIR observações deste período", type="secondary"):
         if data_inicio and data_fim:
             conn = conectar()
-            deleted = conn.table('observacoes').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
-            st.error(f"🗑️ {len(deleted.data)} observações EXCLUÍDAS do período!")
+            data_inicio_str = f"{data_inicio}T00:00:00"
+            data_fim_str = f"{data_fim}T23:59:59"
+            
+            deleted = conn.table('observacoes').delete().gte('data_hora', data_inicio_str).lte('data_hora', data_fim_str).execute()
+            st.error(f"🗑️ {len(deleted.data)} observações EXCLUÍDAS!")
             st.rerun()
         else:
             st.warning("⚠️ Selecione o período primeiro")
@@ -482,20 +499,18 @@ with abas[4]:
                              (notas["data_hora"].dt.date <= data_fim_idx)].copy()
     else:
         notas_analise = notas.copy()
-    if st.button("🗑️ EXCLUIR TODOS os dados deste período", type="secondary", key = "aba4"):
-        if data_inicio_idx and data_fim_idx:
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
+        if data_inicio and data_fim:
             conn = conectar()
+            # CORRIGIDO: Filtro de data no formato ISO
+            data_inicio_str = f"{data_inicio}T00:00:00"
+            data_fim_str = f"{data_fim}T23:59:59"
             
-            # Excluir notas
-            notas_del = conn.table('notas').delete().gte('data_hora', f"{data_inicio_idx} 00:00:00").lte('data_hora', f"{data_fim_idx} 23:59:59").execute()
-            
-            # Excluir observações
-            obs_del = conn.table('observacoes').delete().gte('data_hora', f"{data_inicio_idx} 00:00:00").lte('data_hora', f"{data_fim_idx} 23:59:59").execute()
-            
-            st.error(f"🗑️ {len(notas_del.data)} avaliações + {len(obs_del.data)} observações EXCLUÍDAS!")
+            deleted = conn.table('notas').delete().gte('data_hora', data_inicio_str).lte('data_hora', data_fim_str).execute()
+            st.error(f"🗑️ {len(deleted.data)} registros EXCLUÍDOS!")
             st.rerun()
         else:
-            st.warning("⚠️ Selecione o período primeiro")    
+            st.warning("⚠️ Selecione o período primeiro")  
     if notas_analise.empty:
         st.warning("❌ Sem dados para análise de índices")
     else:
