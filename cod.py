@@ -336,7 +336,7 @@ with abas[1]:
     else:
         notas_servico = notas.copy()
         
-    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary", key = "aba1"):
         if data_inicio and data_fim:
             conn = conectar()
             deleted = conn.table('notas').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
@@ -382,7 +382,7 @@ with abas[2]:
     else:
         notas_filtradas = notas.copy()
         
-    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary", key = "aba2"):
         if data_inicio and data_fim:
             conn = conectar()
             deleted = conn.table('notas').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
@@ -438,7 +438,7 @@ with abas[3]:
     else:
         obs_filtradas = obs.copy()
         
-    if st.button("🗑️ EXCLUIR observações deste período", type="secondary"):
+    if st.button("🗑️ EXCLUIR observações deste período", type="secondary", key = "aba3"):
         if data_inicio and data_fim:
             conn = conectar()
             deleted = conn.table('observacoes').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
@@ -482,7 +482,7 @@ with abas[4]:
                              (notas["data_hora"].dt.date <= data_fim_idx)].copy()
     else:
         notas_analise = notas.copy()
-    if st.button("🗑️ EXCLUIR TODOS os dados deste período", type="secondary"):
+    if st.button("🗑️ EXCLUIR TODOS os dados deste período", type="secondary", key = "aba4"):
         if data_inicio_idx and data_fim_idx:
             conn = conectar()
             
