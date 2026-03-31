@@ -208,6 +208,9 @@ add_logo_top_right("Logosenai.png")
 
 init_db()
 notas, obs, func = carregar_dados_completos()
+if st.button("🔄 Recarregar Dados", key="recarregar"):
+    notas, obs, func = carregar_dados_completos()
+    st.success("✅ Dados recarregados!")
 
 if not notas.empty:
     notas["data_hora"] = pd.to_datetime(notas["data_hora"])
@@ -268,6 +271,55 @@ with abas[0]:
             st.subheader("👥 Funcionários cadastrados")
             if not func.empty:
                 st.dataframe(func[["id", "nome", "cargo", "foto"]], use_container_width=True)
+    st.subheader("🗑️ Gerenciar Funcionários")
+    if not func.empty:
+        col_btns, col_sel = st.columns([1, 3])
+        
+        # Selecionar funcionário para editar/excluir
+        func_sel = col_sel.selectbox("Selecione funcionário:", 
+                                    func['nome'].tolist(), key="func_sel")
+        
+        func_id = func[func['nome'] == func_sel]['id'].iloc[0] if func_sel else None
+        
+        col_edit, col_del = st.columns(2)
+        
+        with col_edit:
+            st.info("✏️ **Editar**")
+            novo_nome = st.text_input("Novo nome:", value=func_sel, key=f"edit_nome_{func_id}")
+            novo_cargo = st.text_input("Novo cargo:", 
+                                      value=func[func['nome']==func_sel]['cargo'].iloc[0], 
+                                      key=f"edit_cargo_{func_id}")
+            
+            if st.button(f"🔄 Atualizar {func_sel}", key=f"update_{func_id}"):
+                conn = conectar()
+                conn.table('funcionarios').update({
+                    'nome': novo_nome.strip(),
+                    'cargo': novo_cargo or ""
+                }).eq('id', func_id).execute()
+                st.success(f"✅ {func_sel} atualizado!")
+                st.rerun()
+        
+        with col_del:
+            st.warning("🗑️ **Excluir**")
+            if st.button(f"❌ EXCLUIR {func_sel}", 
+                        key=f"delete_{func_id}", 
+                        type="secondary",
+                        use_container_width=True):
+                conn = conectar()
+                
+                # 1. Excluir notas relacionadas
+                conn.table('notas').delete().eq('funcionarios', func_id).execute()
+                
+                # 2. Excluir observações relacionadas  
+                conn.table('observacoes').delete().eq('funcionarios', func_id).execute()
+                
+                # 3. Excluir funcionário
+                conn.table('funcionarios').delete().eq('id', func_id).execute()
+                
+                st.error(f"🗑️ {func_sel} e todos os dados relacionados EXCLUÍDOS!")
+                st.rerun()
+    else:
+        st.info("👤 Nenhum funcionário cadastrado")
 
 # ------------------------------------------------------------------
 with abas[1]:
@@ -283,6 +335,15 @@ with abas[1]:
                              (notas["data_hora"].dt.date <= data_fim)].copy()
     else:
         notas_servico = notas.copy()
+        
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
+        if data_inicio and data_fim:
+            conn = conectar()
+            deleted = conn.table('notas').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
+            st.error(f"🗑️ {len(deleted.data)} avaliações de serviço EXCLUÍDAS do período!")
+            st.rerun()
+        else:
+            st.warning("⚠️ Selecione o período primeiro")
     
     if notas_servico.empty:
         st.warning("❌ Sem dados para análise")
@@ -320,7 +381,16 @@ with abas[2]:
                                (notas["data_hora"].dt.date <= data_fim)].copy()
     else:
         notas_filtradas = notas.copy()
-    
+        
+    if st.button("🗑️ EXCLUIR dados deste período", type="secondary"):
+        if data_inicio and data_fim:
+            conn = conectar()
+            deleted = conn.table('notas').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
+            st.error(f"🗑️ {len(deleted.data)} avaliações EXCLUÍDAS do período!")
+            st.rerun()
+        else:
+            st.warning("⚠️ Selecione o período primeiro")
+            
     if notas_filtradas.empty:
         st.warning("❌ Sem dados para análise")
     else:
@@ -367,6 +437,15 @@ with abas[3]:
                            (obs["data_hora"].dt.date <= data_fim)].copy()
     else:
         obs_filtradas = obs.copy()
+        
+    if st.button("🗑️ EXCLUIR observações deste período", type="secondary"):
+        if data_inicio and data_fim:
+            conn = conectar()
+            deleted = conn.table('observacoes').delete().gte('data_hora', f"{data_inicio} 00:00:00").lte('data_hora', f"{data_fim} 23:59:59").execute()
+            st.error(f"🗑️ {len(deleted.data)} observações EXCLUÍDAS do período!")
+            st.rerun()
+        else:
+            st.warning("⚠️ Selecione o período primeiro")
     
     if obs_filtradas.empty:
         st.warning("Sem observações")
@@ -403,7 +482,20 @@ with abas[4]:
                              (notas["data_hora"].dt.date <= data_fim_idx)].copy()
     else:
         notas_analise = notas.copy()
-    
+    if st.button("🗑️ EXCLUIR TODOS os dados deste período", type="secondary"):
+        if data_inicio_idx and data_fim_idx:
+            conn = conectar()
+            
+            # Excluir notas
+            notas_del = conn.table('notas').delete().gte('data_hora', f"{data_inicio_idx} 00:00:00").lte('data_hora', f"{data_fim_idx} 23:59:59").execute()
+            
+            # Excluir observações
+            obs_del = conn.table('observacoes').delete().gte('data_hora', f"{data_inicio_idx} 00:00:00").lte('data_hora', f"{data_fim_idx} 23:59:59").execute()
+            
+            st.error(f"🗑️ {len(notas_del.data)} avaliações + {len(obs_del.data)} observações EXCLUÍDAS!")
+            st.rerun()
+        else:
+            st.warning("⚠️ Selecione o período primeiro")    
     if notas_analise.empty:
         st.warning("❌ Sem dados para análise de índices")
     else:
